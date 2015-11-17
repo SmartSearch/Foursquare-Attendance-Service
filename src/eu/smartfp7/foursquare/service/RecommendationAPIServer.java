@@ -49,7 +49,7 @@ public class RecommendationAPIServer {
 	return date;
   }
   
-  	// TODO: this is crap. Put everything in a parameter file.
+  	// TODO: this is bad. We should put everything in a parameter file.
   	public static final Map<String,String> geo_cities = new HashMap<String, String>();
   	public static final Collection<String> cities     = new ArrayList<String>();
   	static {

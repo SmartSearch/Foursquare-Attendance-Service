@@ -73,7 +73,7 @@ public class RTimeSeries {
 	
 	// Iterate through all lines (i.e. hours) to initialise the object.
 	while((tmp = buffer_forecast.readLine()) != null) {
-	  String[] line = tmp.split(",");
+	  final String[] line = tmp.split(",");
 	  here_now_time_series.put(line[0],new TimeSeriesItem<Double>(line[0], Double.parseDouble(line[1])));
 	  hour_checkins_time_series.put(line[0],new TimeSeriesItem<Double>(line[0], Double.parseDouble(line[2])));
 	  total_checkins_time_series.put(line[0],new TimeSeriesItem<Double>(line[0], Double.parseDouble(line[3])));
@@ -172,7 +172,7 @@ public class RTimeSeries {
   /**
    * Modifies the time series to integrate the estimation of the missing points.
    * There are two implemented methods for recovering missing points: linear interpolation
-   * and seasonal naïve. The first one is called only one point is missing, while the 
+   * and seasonal naive. The first one is called only one point is missing, while the 
    * second one is called when successive points are missing.
    */
   public void generateMissingPoints() {
@@ -197,7 +197,7 @@ public class RTimeSeries {
 		here_now_inter_val   = getLinearlyInterpolatedValue(before, after, this.here_now_time_series);
 		hour_check_inter_val = getLinearlyInterpolatedValue(before, after, this.hour_checkins_time_series);
 	  }
-	  // If several points are missing, we use the seasonal naïve method which
+	  // If several points are missing, we use the seasonal naive method which
 	  // gets the same value as the day before.
 	  else if(interval > 2*Milliseconds_in_1_hour) {
 		Date n = new Date();

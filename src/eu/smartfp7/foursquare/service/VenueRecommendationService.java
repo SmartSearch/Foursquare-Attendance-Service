@@ -35,7 +35,11 @@ import eu.smartfp7.geo.GeoUtil;
 
 @Path(value="/geohash.json")
 public class VenueRecommendationService {
-    
+  
+  private static final String FACEBOOK_SAMPLES_DIR = "/local/tr.smart/foursquare/facebook_samples/";
+  
+  int queryCounter = 0;
+	
   @GET
   @Produces("application/json")
   public String retrieveVenuesByLngLat(@QueryParam("lng") Double longitude, 
@@ -69,8 +73,13 @@ public class VenueRecommendationService {
 	
 	String sub_geohash = geohash.substring(0,3);
 	
-	Collection<Venue> venues = RecommendationAPIServer.city_geohashes_venues.get(RecommendationAPIServer.geo_cities.get(sub_geohash)).get(geohash);
-	if(venues == null && !RecommendationAPIServer.city_geohashes_venues.get(RecommendationAPIServer.geo_cities.get(sub_geohash)).containsKey(geohash))
+	String city = RecommendationAPIServer.geo_cities.get(sub_geohash);
+	if(city == null) {
+	  return new Gson().toJson("No venues for this city.");
+	}
+	
+	Collection<Venue> venues = RecommendationAPIServer.city_geohashes_venues.get(city).get(geohash);
+	if(venues == null && !RecommendationAPIServer.city_geohashes_venues.get(city).containsKey(geohash))
 	  venues = new ArrayList<Venue>();
 	  
 	for(GeoHash neighbour_geohash: GeoHash.fromGeohashString(geohash).getAdjacent()) {
@@ -98,26 +107,11 @@ public class VenueRecommendationService {
 	  return new Gson().toJson("No venues near this location.");
 	}
 	else {
-	  Map<String,Double> prob_c = new HashMap<String, Double>();
-	  
-	  prob_c.put("Society", 0.138744002);
-	  prob_c.put("Shopping", 0.05987899);
-	  prob_c.put("Business", 0.152305445);
-	  prob_c.put("Recreation", 0.062799917);
-	  prob_c.put("Health", 0.051533486);
-	  prob_c.put("Arts", 0.105570624);
-	  prob_c.put("Science", 0.100980597);
-	  prob_c.put("Computers", 0.108074275);
-	  prob_c.put("Reference", 0.055497601);
-	  prob_c.put("Home", 0.022115585);
-	  prob_c.put("Games", 0.020029209);
-	  prob_c.put("News", 0.004172752);
-	  prob_c.put("Sports", 0.06947632);
 	  
 	  for(FacebookPage like: user_likes) {
-		Manager manager = RecommendationAPIServer.managers.get(RecommendationAPIServer.geo_cities.get(sub_geohash));
+		Manager manager = RecommendationAPIServer.managers.get(city);
 		
-		SearchRequest srq = manager.newSearchRequest("1",like.getCategory());
+		SearchRequest srq = manager.newSearchRequest(String.valueOf(queryCounter++), like.getCategory());
 
 		srq.addMatchingModel("Matching", "DPH");
 		srq.setControl("start", "0");
@@ -134,8 +128,7 @@ public class VenueRecommendationService {
 		
 		MetaIndex metaIndex = manager.getIndex().getMetaIndex();
 		for(int i = 0 ; i < docids.length ; ++i) {
-		  String venue_id = metaIndex.getItem("docno", docids[i]);
-		  
+		  String venue_id = metaIndex.getItem("docno", docids[i]);		  
 		  venue_scores.put(venue_id, venue_scores.get(venue_id)+scores[i]);
 		}
 	  }
@@ -181,7 +174,7 @@ public class VenueRecommendationService {
   }
   
   protected static Collection<FacebookPage> getLikesFromSample(String user_id) throws IOException {
-	BufferedReader infofile_buffer = new BufferedReader(new FileReader("/local/tr.smart/foursquare/facebook_samples/"+user_id));
+	BufferedReader infofile_buffer = new BufferedReader(new FileReader(FACEBOOK_SAMPLES_DIR+user_id));
 	JsonObject obj = new JsonParser().parse(infofile_buffer.readLine()).getAsJsonObject();
 	infofile_buffer.close();
 	

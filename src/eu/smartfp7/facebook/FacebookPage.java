@@ -41,6 +41,7 @@ public class FacebookPage {
      }
    */
   
+	private String jsonString;
   private String id;
   private String name;
   private String link;
@@ -60,8 +61,9 @@ public class FacebookPage {
   private int likes;
   
   
-  public FacebookPage(String jsonString) {
-	JsonObject jsonObj= new JsonParser().parse(jsonString).getAsJsonObject();
+  public FacebookPage(String _jsonString) {
+	  this.jsonString = _jsonString;
+	JsonObject jsonObj= new JsonParser().parse(jsonString = _jsonString).getAsJsonObject();
 	
 	if(jsonObj.has("id"))
 	  setId(jsonObj.get("id").getAsString());
@@ -239,6 +241,11 @@ public class FacebookPage {
 
   public void setLikes(int likes) {
     this.likes = likes;
+  }
+  
+  public String toJsonString()
+  {
+	  return this.jsonString;
   }
 
 }

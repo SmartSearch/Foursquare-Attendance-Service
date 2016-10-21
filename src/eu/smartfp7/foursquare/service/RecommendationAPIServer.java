@@ -13,6 +13,7 @@ import java.util.Calendar;
 import java.util.Collection;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -27,7 +28,6 @@ import org.terrier.utility.TerrierTimer;
 
 import com.sun.jersey.api.container.grizzly2.GrizzlyServerFactory;
 import com.sun.jersey.api.core.PackagesResourceConfig;
-import com.sun.jersey.api.core.ResourceConfig;
 
 import eu.smartfp7.foursquare.RTimeSeries;
 import eu.smartfp7.foursquare.Venue;
@@ -37,21 +37,22 @@ public class RecommendationAPIServer {
   
 	// TODO: this is bad. We should put everything in a parameter file.
 	
+	static final String FORECAST_TYPE = "live_arima";
 	static final String HTTP_BIND_HOST = "0.0.0.0";
 	static final int HTTP_BIND_PORT = 9998;
 	
   	public static final Map<String,String> geo_cities = new HashMap<String, String>();
   	public static final Collection<String> cities     = new ArrayList<String>();
 	static {
-	  	  geo_cities.put("u17","amsterdam");
-	  	  geo_cities.put("u10","london2");
-	  	  geo_cities.put("gcp","london2");
-	  	  geo_cities.put("9q8","sanfrancisco");
+	  	  //geo_cities.put("u17","amsterdam");
+	  	  //geo_cities.put("u10","london2");
+	  	  //geo_cities.put("gcp","london2");
+	  	  //geo_cities.put("9q8","sanfrancisco");
 	  	  geo_cities.put("gcu","glasgow");
 	  	  
-	  	  cities.add("amsterdam");
-	  	  cities.add("london2");
-	  	  cities.add("sanfrancisco");
+	  	  //cities.add("amsterdam");
+	  	  //cities.add("london2");
+	  	  //cities.add("sanfrancisco");
 	  	  cities.add("glasgow");
 	  	}
 	
@@ -94,8 +95,12 @@ public class RecommendationAPIServer {
 	
 	protected static HttpServer startServer() throws IOException {
 		System.out.println("Starting grizzly...");
-		ResourceConfig rc = new PackagesResourceConfig("eu.smartfp7.foursquare");
-		return GrizzlyServerFactory.createHttpServer(BASE_URI, rc);
+		
+		PackagesResourceConfig rc = new PackagesResourceConfig(VenueRecommendationService.class.getPackage().getName());
+		rc.getClasses().add(VenueRecommendationService.class);
+		rc.getClasses().add(FBLikesService.class);
+		assert rc.getClasses().size() > 0;
+		return GrizzlyServerFactory.createHttpServer(BASE_URI,  rc);
 	}
 
 	public static class RemindTask extends TimerTask {
@@ -123,7 +128,7 @@ public class RecommendationAPIServer {
            for(Venue venue: venues) {
         	 //VenueForecast forecast = new VenueForecast(RecommendationAPIServer.folder+"/"+RecommendationAPIServer.geo_cities.get(sub_geohash)+"_forecasts/live/"+venue.getId()+".forecast");
         	 try {
-        	   VenueForecast forecast = new VenueForecast(RecommendationAPIServer.folder+"/"+city+"_forecasts/live_arima/"+venue.getId()+".forecast");
+        	   VenueForecast forecast = new VenueForecast(RecommendationAPIServer.folder+"/"+city+"_forecasts/"+FORECAST_TYPE+"/"+venue.getId()+".forecast");
         	   forecast.firstStepProbs(RecommendationAPIServer.mu.get(city),RecommendationAPIServer.mu.get(city)*RecommendationAPIServer.rtss.get(venue.getId())/RecommendationAPIServer.background_sum.get(city));
         	   forecast.secondStepProbs(RecommendationAPIServer.mu.get(city), RecommendationAPIServer.background_forecast.get(city));
 
@@ -163,10 +168,15 @@ public class RecommendationAPIServer {
 				for(VenueForecast f: venue_forecasts.values())
 				  f.secondStepProbs(mu.get(city), background_forecast.get(city));
 			  
+			  System.out.println("Background startup thread complete");
+			  
 			  timer = new Timer();
 		      timer.schedule(new RecommendationAPIServer.RemindTask(), getFollowing11am().getTime(), 1000*60*60*24);
 		      System.out.println("Scheduled job: recomputing background probabilities every day at 11am.");
+		      
+		      
 		  }
+		  
 	  };
       
 	  backgroundStartup.start();
@@ -186,8 +196,8 @@ public class RecommendationAPIServer {
 		Index index = Index.createIndex(folder+"/"+cityName+".index", "data");
 		managers.put(cityName,new Manager(index));
 		
-		BufferedReader buffer = new BufferedReader(new FileReader(folder+"/"+cityName+".geohash."+precision));
-		String tmp;
+		
+		
 		
 		Map<String,Collection<Venue>> geo_venues = new HashMap<String, Collection<Venue>>();
 		
@@ -198,7 +208,7 @@ public class RecommendationAPIServer {
 		Double cmu = 0.0;
 		Double cbackground_sum = 0.0;
 		
-		ArrayList<File>        files    = VenueUtil.getAllVenueFilesEndingWith(folder, cityName, ".ts");
+		List<File> files = VenueUtil.getAllVenueFilesEndingWith(folder, cityName, ".ts");
 		TerrierTimer progress = new TerrierTimer("Loading venues from " + cityName, files.size());
 		progress.start();
 		try{
@@ -206,11 +216,17 @@ public class RecommendationAPIServer {
 				try{
 					final String venueId = FilenameUtils.removeExtension(file.getName());
 					RTimeSeries ts = new RTimeSeries(file.getAbsolutePath());
+					if (ts.getDates().size() == 0)
+					{
+						System.err.println("WARN: Skipping venue with no current dates in " + file);
+						continue;
+					}
 					rtss.put(venueId,ts.getTotalCheckins());
 					cmu += ts.getTotalCheckins()/ts.getDates().size();
 					cbackground_sum += ts.getTotalCheckins();
 				} catch (Exception e) {
 					System.err.println("WARN: problem with venue recorded in " + file + " : " + e.toString());
+					e.printStackTrace();
 				}
 				progress.increment();
 			}
@@ -222,35 +238,70 @@ public class RecommendationAPIServer {
 		cmu /= files.size();
 
 		VenueForecast sum_forecast = null;
+		String tmp;
 		
-		while ((tmp = buffer.readLine()) != null) {
-		  String[] line = tmp.split("\t");
-		  Collection<Venue> geohash_venues = geo_venues.get(line[0]);
-		  if(geohash_venues == null) {
-			geohash_venues = new ArrayList<Venue>();
-			geo_venues.put(line[0], geohash_venues);
-		  }
-
-		  BufferedReader infofile_buffer = new BufferedReader(new FileReader(folder+"/"+cityName+"_specific_crawl/"+line[1]+".info"));
-		  
-		  String prefix = "live_arima";
-		  
-		  VenueForecast forecast = new VenueForecast(RecommendationAPIServer.folder+"/"+cityName+"_forecasts/"+prefix+"/"+line[1]+".forecast");
-		  forecast.firstStepProbs(cmu,cmu*rtss.get(line[1])/cbackground_sum);
-		  if(sum_forecast == null)
-			sum_forecast = forecast;
-		  else
-			sum_forecast.add(forecast);
-		  
-		  geohash_venues.add(new Venue(infofile_buffer.readLine()));
-		  infofile_buffer.close();
+		final String fileName_geohash2venue = folder+"/"+cityName+".geohash."+precision;
+		BufferedReader geohash2venue = new BufferedReader(new FileReader(fileName_geohash2venue));
+		progress = new TerrierTimer("Loading venues from " + geohash2venue, files.size());
+		progress.start();
+		try{
+			
+			while ((tmp = geohash2venue.readLine()) != null) {
+			  String[] line = tmp.split("\t");
+			  final String geoHash = line[0];
+			  final String venueId = line[1];
+			  
+			  Collection<Venue> geohash_venues = geo_venues.get(geoHash);
+			  if(geohash_venues == null) {
+				geohash_venues = new ArrayList<Venue>();
+				geo_venues.put(geoHash, geohash_venues);
+			  }
+	
+			  
+			  //check that we have a timeseries for this venue
+			  if (! rtss.containsKey(venueId))
+			  {
+				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no rtss value for that venue");
+				  continue;
+			  }
+			  assert rtss.get(venueId) != null;
+			  
+			  //open the specific information about the venue
+			  File venueInfoFile = new File(folder+"/"+cityName+"_specific_crawl/"+venueId+".info");
+			  if (! venueInfoFile.exists())
+			  {
+				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no venue info file for that venue");
+				  continue;
+			  }
+			  BufferedReader infofile_buffer = new BufferedReader(new FileReader(venueInfoFile));
+			  
+			  String filename_forecast = RecommendationAPIServer.folder+"/"+cityName+"_forecasts/"+FORECAST_TYPE+"/"+venueId+".forecast";
+			  if (! new File(filename_forecast).exists())
+			  {
+				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no venue forecase file for that venue");
+				  continue;
+			  }
+			  	  
+			  VenueForecast forecast = new VenueForecast(filename_forecast);
+			  forecast.firstStepProbs(cmu,cmu*rtss.get(venueId)/cbackground_sum);
+			  if(sum_forecast == null)
+				sum_forecast = forecast;
+			  else
+				sum_forecast.add(forecast);
+			  
+			  geohash_venues.add(new Venue(infofile_buffer.readLine()));
+			  infofile_buffer.close();
+			}
+			geohash2venue.close();		
+		} finally {
+			progress.finished();
 		}
-		buffer.close();
 		
 		mu.put(cityName, cmu);
 		background_sum.put(cityName, cbackground_sum);
 		background_forecast.put(cityName, sum_forecast);
 		city_geohashes_venues.put(cityName, geo_venues);
+		System.err.println("Finished loading " + cityName);
 	}    
 
 }

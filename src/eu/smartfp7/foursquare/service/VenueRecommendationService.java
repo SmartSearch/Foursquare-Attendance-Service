@@ -33,7 +33,7 @@ import eu.smartfp7.foursquare.Venue;
 import eu.smartfp7.geo.GeoHash;
 import eu.smartfp7.geo.GeoUtil;
 
-@Path(value="/geohash.json")
+@Path("/geohash.json")
 public class VenueRecommendationService {
   
   private static final String FACEBOOK_SAMPLES_DIR = "/local/tr.smart/foursquare/facebook_samples/";
@@ -74,9 +74,10 @@ public class VenueRecommendationService {
 	String sub_geohash = geohash.substring(0,3);
 	
 	String city = RecommendationAPIServer.geo_cities.get(sub_geohash);
-	if(city == null) {
+	if(city == null || RecommendationAPIServer.city_geohashes_venues.get(city) == null) {
 	  return new Gson().toJson("No venues for this city.");
 	}
+	assert RecommendationAPIServer.city_geohashes_venues.get(city) != null;
 	
 	Collection<Venue> venues = RecommendationAPIServer.city_geohashes_venues.get(city).get(geohash);
 	if(venues == null && !RecommendationAPIServer.city_geohashes_venues.get(city).containsKey(geohash))

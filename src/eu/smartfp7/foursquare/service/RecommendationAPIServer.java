@@ -124,8 +124,12 @@ public class RecommendationAPIServer {
            } catch (IOException e) {
         	 System.err.println("Error when listing venues for "+city+" : "+e.getMessage());
            }
+           if (venues.size() == 0)
+        	   continue;
            
            for(Venue venue: venues) {
+        	 if (venue == null | rtss.containsKey(venue.getId()))
+        		continue;
         	 //VenueForecast forecast = new VenueForecast(RecommendationAPIServer.folder+"/"+RecommendationAPIServer.geo_cities.get(sub_geohash)+"_forecasts/live/"+venue.getId()+".forecast");
         	 try {
         	   VenueForecast forecast = new VenueForecast(RecommendationAPIServer.folder+"/"+city+"_forecasts/"+FORECAST_TYPE+"/"+venue.getId()+".forecast");

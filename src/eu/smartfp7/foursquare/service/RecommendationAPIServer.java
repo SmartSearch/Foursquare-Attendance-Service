@@ -192,7 +192,8 @@ public class RecommendationAPIServer {
 		  BASE_URI, BASE_URI));
 	  System.in.read();
 	  httpServer.stop();
-	  timer.cancel();
+	  if (timer != null)
+		  timer.cancel();
 	}
 
 	protected static void loadCity(String cityName)
@@ -247,11 +248,14 @@ public class RecommendationAPIServer {
 		final String fileName_geohash2venue = folder+"/"+cityName+".geohash."+precision;
 		BufferedReader geohash2venue = new BufferedReader(new FileReader(fileName_geohash2venue));
 		progress = new TerrierTimer("Loading venues from " + geohash2venue, files.size());
+		Map<String,Integer> finalVenueCount = new HashMap<String,Integer>();
+		for(String city : cities)
+			finalVenueCount.put(city, 0);
 		progress.start();
 		try{
 			
 			while ((tmp = geohash2venue.readLine()) != null) {
-			  String[] line = tmp.split("\t");
+			  String[] line = tmp.split("\t", 2);
 			  final String geoHash = line[0];
 			  final String venueId = line[1];
 			  
@@ -274,7 +278,7 @@ public class RecommendationAPIServer {
 			  File venueInfoFile = new File(folder+"/"+cityName+"_specific_crawl/"+venueId+".info");
 			  if (! venueInfoFile.exists())
 			  {
-				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no venue info file for that venue");
+				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no venue info file for that venue at " + venueInfoFile.toString());
 				  continue;
 			  }
 			  BufferedReader infofile_buffer = new BufferedReader(new FileReader(venueInfoFile));
@@ -282,7 +286,7 @@ public class RecommendationAPIServer {
 			  String filename_forecast = RecommendationAPIServer.folder+"/"+cityName+"_forecasts/"+FORECAST_TYPE+"/"+venueId+".forecast";
 			  if (! new File(filename_forecast).exists())
 			  {
-				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no venue forecase file for that venue");
+				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no venue forecase file for that venue at"  + filename_forecast);
 				  continue;
 			  }
 			  	  
@@ -293,6 +297,8 @@ public class RecommendationAPIServer {
 			  else
 				sum_forecast.add(forecast);
 			  
+			  //finalVenueCount.compute(cityName, (k, v) -> v == null ? 1 : v+1);
+			  finalVenueCount.put(cityName, finalVenueCount.get(cityName)+1);
 			  geohash_venues.add(new Venue(infofile_buffer.readLine()));
 			  infofile_buffer.close();
 			}
@@ -305,7 +311,7 @@ public class RecommendationAPIServer {
 		background_sum.put(cityName, cbackground_sum);
 		background_forecast.put(cityName, sum_forecast);
 		city_geohashes_venues.put(cityName, geo_venues);
-		System.err.println("Finished loading " + cityName);
-	}    
+		System.err.println("Finished loading " + cityName + " with " + finalVenueCount.get(cityName) + " venues");
+	}
 
 }

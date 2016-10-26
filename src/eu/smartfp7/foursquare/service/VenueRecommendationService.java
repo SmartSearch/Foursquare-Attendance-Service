@@ -15,6 +15,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Response;
 
 import org.apache.commons.lang.StringUtils;
 import org.terrier.matching.ResultSet;
@@ -40,19 +41,49 @@ public class VenueRecommendationService {
 
 	int queryCounter = 0;
 	
+	static class NoVenuesFoundException extends Exception
+	{
+		private static final long serialVersionUID = 1L;
+		public NoVenuesFoundException(String message) {
+			super(message);			
+		}		
+	}
+	
 	@GET
 	@Produces("application/json")
-	public String retrieveVenuesByLngLat(@QueryParam("lng") Double longitude, @QueryParam("lat") Double latitude,
+	public Response retrieveVenuesByLngLat(@QueryParam("lng") Double longitude, @QueryParam("lat") Double latitude,
 			@QueryParam("user_id") String user_id, @QueryParam("access_token") String access_token,
 			@QueryParam("callback") String callback, @QueryParam("limit") Integer limit)
 			throws IOException, ParseException {
+		
+		String rtr;
+		String venue_json = null;
+		int code = 200;
 		// First, get the geohash corresponding to the user location
 		if (longitude == null && latitude == null)
-			return callback == null ? "{}" : callback + "( {} );";
-
-		String venue_json = retrieveVenues(GeoUtil.geoHash(longitude, latitude, RecommendationAPIServer.precision),
-				user_id, access_token, limit);
-		return callback == null ? venue_json : callback + "( " + venue_json + " );";
+		{
+			venue_json = "{}";
+			code = 400;
+		}
+		else
+		{
+			try{
+				venue_json = retrieveVenues(GeoUtil.geoHash(longitude, latitude, RecommendationAPIServer.precision),
+					user_id, access_token, limit);
+			} catch (NoVenuesFoundException nvfe) {
+				code = 404;
+				venue_json = "{ \"" + nvfe.getMessage() + "\"}";
+				System.err.println("WARN: NoVenuesFoundException: "  + nvfe);
+				nvfe.printStackTrace();
+			} catch (Exception e ) {
+				code = 500;
+				venue_json = "{ \"" + e.getMessage() + "\"}";
+				System.err.println("WARN: Exception: "  + e);
+				e.printStackTrace();
+			}
+		}
+		rtr = callback == null ? venue_json : callback + "( " + venue_json + " );";
+		return Response.status(code).entity(rtr).build();
 	}
 
 	@GET
@@ -66,18 +97,24 @@ public class VenueRecommendationService {
 	}
 
 	protected String retrieveVenues(String geohash, String user_id, String access_token, Integer limit)
-			throws IOException, ParseException {
+			throws IOException, ParseException, NoVenuesFoundException {
 		// Then, get all the venue IDs that are located within the same geohash
 		// area
 		// (stored in the geohashes_files folder)
 		Collection<VenueJSON> return_json = new ArrayList<VenueJSON>();
 
 		String sub_geohash = geohash.substring(0, 3);
-
 		String city = RecommendationAPIServer.geo_cities.get(sub_geohash);
-		if (city == null || RecommendationAPIServer.city_geohashes_venues.get(city) == null) {
-			return new Gson().toJson("No venues for this city.");
+		if (city == null)
+		{
+			System.err.println("sub_geohash " + sub_geohash + " did not occur in " + RecommendationAPIServer.geo_cities);
+			throw new NoVenuesFoundException("Sorry, we dont index any city near geohash " + geohash);
 		}
+		if (RecommendationAPIServer.city_geohashes_venues.get(city) == null)
+		{
+			throw new NoVenuesFoundException("Identified city " + city + " from geohash " + geohash + " but no venues identified near here");
+		}
+
 		assert RecommendationAPIServer.city_geohashes_venues.get(city) != null;
 
 		Collection<Venue> venues = RecommendationAPIServer.city_geohashes_venues.get(city).get(geohash);
@@ -117,7 +154,7 @@ public class VenueRecommendationService {
 		}
 
 		if (venues.isEmpty() || venues == null) {
-			return new Gson().toJson("No venues near this location.");
+			throw new NoVenuesFoundException("No venues near this location.");
 		}
 		if (user_likes.size() > 0) {
 

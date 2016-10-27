@@ -1,5 +1,15 @@
-Foursquare-Attendance-Service
-=============================
+# Foursquare-Attendance-Service
+
+This repository contains the code that runs the SmartVenues web service. The original SmartVenues application of the University of Glasgow is available at (http://demos.terrier.org/SMART/venuesuggestion/). Before setting up the web service, please have a
+ look at https://github.com/SmartSearch/Foursquare-Attendance-Crawler and https://github.com/SmartSearch/Foursquare-Attendance-Forecasting.
+
+## Running
+
+```
+mvn exec:java  -Dterrier.etc=/path/to/terrier/etc -Dterrier.setup=/path/to/terrier/etc/terrier.properties -Dexec.args="/path/to/foursquare 6"
+```
+
+## Citing
 
 If you use this code for a research purpose, please use the following citation:
 
@@ -25,5 +35,3 @@ Bibtex:
  keywords = {attendance prediction, facebook, foursquare, location-based social network, time series forecasting, venue recommendation},
 } 
 ```
-
-This repository contains the code that runs the SmartVenues web service. The original SmartVenues application of the University of Glasgow is available at (http://demos.terrier.org/SMART/venuesuggestion/). Before setting up the web service, please have a look at https://github.com/SmartSearch/Foursquare-Attendance-Crawler and https://github.com/SmartSearch/Foursquare-Attendance-Forecasting.

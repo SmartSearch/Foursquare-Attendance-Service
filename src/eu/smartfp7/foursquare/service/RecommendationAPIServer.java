@@ -172,7 +172,7 @@ public class RecommendationAPIServer {
 				for(VenueForecast f: venue_forecasts.values())
 				  f.secondStepProbs(mu.get(city), background_forecast.get(city));
 			  
-			  System.out.println("Background startup thread complete");
+			  System.out.println("Background startup thread complete: "+ venue_forecasts.size()+ " venues's forecasts loaded");
 			  
 			  timer = new Timer();
 		      timer.schedule(new RecommendationAPIServer.RemindTask(), getFollowing11am().getTime(), 1000*60*60*24);
@@ -286,11 +286,12 @@ public class RecommendationAPIServer {
 			  String filename_forecast = RecommendationAPIServer.folder+"/"+cityName+"_forecasts/"+FORECAST_TYPE+"/"+venueId+".forecast";
 			  if (! new File(filename_forecast).exists())
 			  {
-				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no venue forecase file for that venue at"  + filename_forecast);
+				  System.err.println("WARN: ignoring venue " + venueId + " in " + fileName_geohash2venue + ": no venue forecast file for that venue at"  + filename_forecast);
 				  continue;
 			  }
 			  	  
 			  VenueForecast forecast = new VenueForecast(filename_forecast);
+			  venue_forecasts.put(venueId, forecast);
 			  forecast.firstStepProbs(cmu,cmu*rtss.get(venueId)/cbackground_sum);
 			  if(sum_forecast == null)
 				sum_forecast = forecast;

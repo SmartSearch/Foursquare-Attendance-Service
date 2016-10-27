@@ -25,6 +25,12 @@
 			<groupId>org.terrier</groupId>
 			<artifactId>terrier-core</artifactId>
 			<version>4.1-SNAPSHOT</version>
+			<exclusions>
+			<exclusion>
+				<groupId>org.ow2.asm</groupId>
+				<artifactId>asm-debug-all</artifactId>
+			</exclusion>
+			</exclusions>
 		</dependency>
 
 
@@ -167,6 +173,42 @@
 					<target>1.7</target>
 				</configuration>
 			</plugin>
+		
+<plugin>
+<groupId>org.apache.maven.plugins</groupId>
+<artifactId>maven-jar-plugin</artifactId>
+<version>2.4</version>
+<configuration>
+  <archive>
+    <manifest>
+	<mainClass>eu.smartfp7.foursquare.service.RecommendationAPIServer</mainClass>
+    </manifest>
+  </archive>
+</configuration>
+    </plugin>
+
+	
+			 <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+        <version>1.5.0</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>java</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+			<executable>java</executable>
+            <mainClass>eu.smartfp7.foursquare.service.RecommendationAPIServer</mainClass>
+          <!-- optional 
+          <arguments>
+            <argument>-X</argument>
+            <argument>myproject:dist</argument>
+          </arguments> -->
+        </configuration>
+      </plugin>			
 		</plugins>
 	</build>
 </project>

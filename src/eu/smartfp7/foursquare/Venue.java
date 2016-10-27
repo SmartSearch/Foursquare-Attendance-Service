@@ -111,7 +111,7 @@ public class Venue{
 		this.icons = new ArrayList<String>();
 		
 		if(jsonObj.has("url"))
-			setUrl(jsonObj.get("url").getAsString().replaceAll("â.*", ""));
+			setUrl(jsonObj.get("url").getAsString().replaceAll("\u00e2.*", ""));
 		if(jsonObj.has("canonicalUrl"))
 			setCanonicalUrl(jsonObj.get("canonicalUrl").getAsString());
 		if(jsonObj.has("location")){

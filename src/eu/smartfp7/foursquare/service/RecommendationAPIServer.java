@@ -199,6 +199,10 @@ public class RecommendationAPIServer {
 	protected static void loadCity(String cityName)
 			throws IOException, ParseException {
 		Index index = Index.createIndex(folder+"/"+cityName+".index", "data");
+		if (index == null)
+		{
+			throw new IOException("Index at "+folder+"/"+cityName+".index , data"+" failed to load : " + Index.getLastIndexLoadError());
+		}
 		managers.put(cityName,new Manager(index));
 		
 		

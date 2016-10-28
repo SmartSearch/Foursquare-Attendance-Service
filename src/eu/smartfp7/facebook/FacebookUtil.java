@@ -48,7 +48,7 @@ public class FacebookUtil {
    */
   public static Collection<FacebookPage> getFacebookLikesByUserId(String user_id, String access_token) throws IOException {
 	final String apiUrl = "https://graph.facebook.com/v2.8/"+user_id+"/likes?"
-		+"fields=category,category_list,website,about,were_here_count,name,cover,talking_about_count,username,company_overview,likes,location,new_like_count"
+		+"fields=category,category_list,website,about,were_here_count,name,talking_about_count,username,company_overview,location,fan_count"
 		+"&limit=100&access_token="+access_token;
 	System.err.println("Accessing fb graph api at " + apiUrl);
 	JsonObject jsonObj= new JsonParser().parse(Utils.makeAPICall(apiUrl)).getAsJsonObject();

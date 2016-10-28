@@ -41,6 +41,7 @@ public class FacebookPage {
      }
    */
   
+	private String jsonString;
   private String id;
   private String name;
   private String link;
@@ -60,8 +61,9 @@ public class FacebookPage {
   private int likes;
   
   
-  public FacebookPage(String jsonString) {
-	JsonObject jsonObj= new JsonParser().parse(jsonString).getAsJsonObject();
+  public FacebookPage(String _jsonString) {
+	  this.jsonString = _jsonString;
+	JsonObject jsonObj= new JsonParser().parse(jsonString = _jsonString).getAsJsonObject();
 	
 	if(jsonObj.has("id"))
 	  setId(jsonObj.get("id").getAsString());
@@ -89,8 +91,8 @@ public class FacebookPage {
 	  setTalking_about_count(jsonObj.get("talking_about_count").getAsInt());
 	if(jsonObj.has("were_here_count"))
 	  setWere_here_count(jsonObj.get("were_here_count").getAsInt());
-	if(jsonObj.has("likes"))
-	  setLikes(jsonObj.get("likes").getAsInt());
+	if(jsonObj.has("fan_count"))
+	  setLikes(jsonObj.get("fan_count").getAsInt());
 	
 	if(jsonObj.has("category_list")) {
 	  Collection<String> tmp_list = new ArrayList<String>();
@@ -239,6 +241,11 @@ public class FacebookPage {
 
   public void setLikes(int likes) {
     this.likes = likes;
+  }
+  
+  public String toJsonString()
+  {
+	  return this.jsonString;
   }
 
 }

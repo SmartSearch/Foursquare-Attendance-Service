@@ -30,6 +30,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 
 /**
@@ -71,9 +72,16 @@ public class RTimeSeries {
 	// Ignore the first line since it only contains headers (used in R).
 	String tmp = buffer_forecast.readLine();
 	
+	final Pattern checkTime = getThisYearAndLastDecemberRegex();
+	
 	// Iterate through all lines (i.e. hours) to initialise the object.
 	while((tmp = buffer_forecast.readLine()) != null) {
-	  String[] line = tmp.split(",");
+	
+	  //some data files can have really old data, use a regex to avoid even data parsing them
+	  if (! checkTime.matcher(tmp).matches())
+		  continue;
+	  
+	  final String[] line = tmp.split(",", 4);
 	  here_now_time_series.put(line[0],new TimeSeriesItem<Double>(line[0], Double.parseDouble(line[1])));
 	  hour_checkins_time_series.put(line[0],new TimeSeriesItem<Double>(line[0], Double.parseDouble(line[2])));
 	  total_checkins_time_series.put(line[0],new TimeSeriesItem<Double>(line[0], Double.parseDouble(line[3])));
@@ -172,7 +180,7 @@ public class RTimeSeries {
   /**
    * Modifies the time series to integrate the estimation of the missing points.
    * There are two implemented methods for recovering missing points: linear interpolation
-   * and seasonal naïve. The first one is called only one point is missing, while the 
+   * and seasonal naive. The first one is called only one point is missing, while the 
    * second one is called when successive points are missing.
    */
   public void generateMissingPoints() {
@@ -197,7 +205,7 @@ public class RTimeSeries {
 		here_now_inter_val   = getLinearlyInterpolatedValue(before, after, this.here_now_time_series);
 		hour_check_inter_val = getLinearlyInterpolatedValue(before, after, this.hour_checkins_time_series);
 	  }
-	  // If several points are missing, we use the seasonal naïve method which
+	  // If several points are missing, we use the seasonal naive method which
 	  // gets the same value as the day before.
 	  else if(interval > 2*Milliseconds_in_1_hour) {
 		Date n = new Date();
@@ -251,8 +259,28 @@ public class RTimeSeries {
   }
   
   public Double getTotalCheckins() {
+	  if (this.dates.size() == 0)
+		  return 0d;
 	DateFormat    df   = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 	return total_checkins_time_series.get(df.format(this.dates.get(this.dates.size()-1))).getValue();
+  }
+  
+  static Pattern getThisYearAndLastDecemberRegex()
+  {
+	  Calendar now = Calendar.getInstance();
+	  int thisyear = now.get(Calendar.YEAR);
+	  String thisyearInString = String.valueOf(thisyear);
+	  String lastyearInString = String.valueOf(thisyear-1);
+	  return Pattern.compile("^("+thisyearInString+"|"+lastyearInString+"-12-).*");
+  }
+  
+  public static void main(String[] args)
+  {
+	  Pattern p = getThisYearAndLastDecemberRegex();
+	  System.out.println(p.matcher("2016-xxx").matches());
+	  System.out.println(p.matcher("2015-12-").matches());
+	  System.out.println(p.matcher("2013-xxx").matches());
+	  
   }
   
   

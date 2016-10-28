@@ -33,7 +33,7 @@ public class VenueForecast {
 	BufferedReader buffer_forecast = new BufferedReader(new FileReader(file));
 	String tmp;
 	while((tmp = buffer_forecast.readLine()) != null) {
-	  String[] line = tmp.split(",");
+	  String[] line = tmp.split(",", 2);
 	  TimeSeriesItem<Double> item = new TimeSeriesItem<Double>(line[0], Double.parseDouble(line[1]));
 	  neural_nets.add(item);
 	}

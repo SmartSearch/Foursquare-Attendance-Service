@@ -36,7 +36,7 @@ public class FacebookUtil {
   public static Collection<FacebookPage> getFacebookPagesFromJSON(JsonObject jsonObj) {
 	Collection<FacebookPage> return_coll = new ArrayList<FacebookPage>();
 	
-	for(JsonElement e: jsonObj.get("likes").getAsJsonObject().get("data").getAsJsonArray())
+	for(JsonElement e: jsonObj.get("data").getAsJsonArray())
 	  return_coll.add(new FacebookPage(e.toString()));
 
 	return return_coll;
@@ -47,8 +47,18 @@ public class FacebookUtil {
    * a list of FacebookPage objects (which only contain IDs, categories and names).
    */
   public static Collection<FacebookPage> getFacebookLikesByUserId(String user_id, String access_token) throws IOException {
-	JsonObject jsonObj= new JsonParser().parse(Utils.makeAPICall("https://graph.facebook.com/"+user_id+"?fields=likes&limit=100&access_token="+access_token)).getAsJsonObject();
-	
-	return getFacebookPagesFromJSON(jsonObj);
+	final String apiUrl = "https://graph.facebook.com/v2.8/"+user_id+"/likes?"
+		+"fields=category,category_list,website,about,were_here_count,name,talking_about_count,username,company_overview,location,fan_count"
+		+"&limit=100&access_token="+access_token;
+	System.err.println("Accessing fb graph api at " + apiUrl);
+	JsonObject jsonObj= new JsonParser().parse(Utils.makeAPICall(apiUrl)).getAsJsonObject();
+	try{
+		return getFacebookPagesFromJSON(jsonObj);
+	} catch (Exception e) {
+		System.err.println(e + " Could not find desired items likes->data->[array] from JSON:");
+		e.printStackTrace();
+		System.err.println(jsonObj.toString());
+		return new ArrayList<>();
+	}
   }
 }

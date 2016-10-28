@@ -38,6 +38,10 @@ public class VenueUtil {
   
   public static ArrayList<File> getAllFilesEndingWith(String path, final String extension) {
 	File directory = new File(path);
+	if (! directory.exists())
+	{
+		throw new IllegalArgumentException("Path " + path + " does not exist");
+	}
 	ArrayList<File> files = new ArrayList<File>(Arrays.asList(directory.listFiles(new FilenameFilter() {
 	    @Override
 	    public boolean accept(File dir, String name) {
@@ -49,7 +53,8 @@ public class VenueUtil {
   }
   
   public static ArrayList<File> getAllVenueFilesEndingWith(String folder, String city, final String extension) {
-	return getAllFilesEndingWith(folder + city + File.separator + "attendances_crawl", extension);
+	  return getAllFilesEndingWith(folder+"/"+city+"_specific_crawl", extension); 
+	  //return getAllFilesEndingWith(folder + city + File.separator + "attendances_crawl", extension);
   }
   
   

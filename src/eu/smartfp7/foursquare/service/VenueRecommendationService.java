@@ -172,14 +172,21 @@ public class VenueRecommendationService {
 				manager.runPostProcessing(srq);
 				manager.runPostFilters(srq);
 
-				ResultSet set = srq.getResultSet();
-				int[] docids = set.getDocids();
-				double[] scores = set.getScores();
-
-				MetaIndex metaIndex = manager.getIndex().getMetaIndex();
+				final ResultSet set = srq.getResultSet();
+				final int[] docids = set.getDocids();
+				final double[] scores = set.getScores();
+				System.err.println("INFO: " + docids.length + " results retrieved by Terrier query " + like.getCategory() );
+				
+				final MetaIndex metaIndex = manager.getIndex().getMetaIndex();
 				for (int i = 0; i < docids.length; ++i) {
-					String venue_id = metaIndex.getItem("docno", docids[i]);
-					venue_scores.put(venue_id, venue_scores.get(venue_id) + scores[i]);
+					final String venue_id = metaIndex.getItem("docno", docids[i]);
+					Double popularityScore = venue_scores.get(venue_id);
+					if (popularityScore == null)
+					{
+						System.err.println("WARN: No popularity score for venue " + venue_id);
+						popularityScore = 0d;
+					}
+					venue_scores.put(venue_id, popularityScore + scores[i]);
 				}
 			}
 			
